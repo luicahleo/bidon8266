@@ -1,9 +1,18 @@
 #include <Arduino.h>
-#include <ESP8266WiFi.h>>
+#include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 
-const char* ssid     = "TP-LINK_B440";
-const char* password = "29407828";
+#define PIN_TRIG D5
+#define PIN_ECHO D6
+#define SLEEP_TIME 3600e6                    // sleep intervalls in us
+//#define SLEEP_TIME 60*1*1000000                    // minuto o 60 segundos, para 1 hora 60*60*1000000
+//#define SLEEP_TIME 60*1*1000000                    // minuto o 60 segundos, para 1 hora 60*60*1000000
+
+// const char* ssid     = "TP-LINK_B440";
+// const char* password = "29407828";
+
+const char* ssid     = "NuCom_0201A0_plus";
+const char* password = "VYJ81Sahr961";
 
 const char *mqtt_server = "trajano.es";
 const int mqtt_port = 1883;
@@ -29,8 +38,13 @@ int distancia = 0; // pruebas
 void setup_wifi();
 void callback(char* topic, byte* payload, unsigned int length);
 void reconnect();
+int medicion();
+
 
 void setup() {
+	pinMode(2, OUTPUT);
+    pinMode(PIN_TRIG, OUTPUT);
+    pinMode(PIN_ECHO, INPUT);
 	pinMode(BUILTIN_LED, OUTPUT);
 	Serial.begin(115200);
 	randomSeed(micros()); //para semillas para generar valores aleatorios
@@ -49,19 +63,58 @@ void loop() {
 	long now = millis();
 	if (now - lastMsg > 500){
 		lastMsg = now;
-		distancia++;
+		//distancia++;
+		
+		distancia = medicion();
+		distancia = 400 - distancia;
+		//Serial.println(distancia); 
+
 		//temp2++;
 		//volts++;
 
 		//String to_send = String(distancia) + "," + String(temp2) + "," + String(volts);
 		String to_send = String(distancia);
-		to_send.toCharArray(msg, 25);
+		to_send.toCharArray(msg, 25);   
 		Serial.print("Publicamos mensaje -> ");
 		Serial.println(msg);
 		client.publish("values", msg);
-	}
-}
+		
 
+		delay(2000);
+		//entramos en deepSleep()
+  		ESP.deepSleep(SLEEP_TIME);
+	}
+
+	//entramos en deepSleep()
+  	// ESP.deepSleep(SLEEP_TIME);
+}
+//*****************************
+//*** FUNCION QUE REALIZA LA MEDICION DE NIVEL DE AGUA ***
+//*****************************
+
+int medicion(){
+
+
+  digitalWrite(PIN_TRIG, LOW);  //para generar un pulso limpio ponemos a LOW 4us
+  delayMicroseconds(2);
+   
+  digitalWrite(PIN_TRIG, HIGH);  //generamos Trigger (disparo) de 10us
+  delayMicroseconds(15);
+  digitalWrite(PIN_TRIG, LOW);
+   
+  //tiempo = pulseIn(PIN_ECHO, HIGH);
+  int distance = pulseIn(PIN_ECHO, HIGH, 26000);
+  distancia = distance/58.3;
+
+  //Serial.println(distancia);
+
+  delay(2000);
+
+  //distancia = 44;  
+
+  return distancia;
+  
+}
 
 
 //*****************************
